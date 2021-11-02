@@ -1,0 +1,52 @@
+#!/usr/local/bin/python3
+from common import Helm, Repos
+import sys, yaml, os, time
+
+TEMPDIR="tmp"
+
+def template_yaml(manifests):
+  for chart in manifests.keys():
+    manifests[chart].generateSeperatedResources()
+
+
+def load_manifest(manifest,target):
+  os.system("awk '{f=\"split_\" NR; print $0 > f}' RS='---' "+manifest)
+
+  manifests = dict()
+  for entry in os.scandir():
+    if entry.name.startswith('split_'):
+      with open(entry, 'r') as stream:
+        try:
+          parsed = yaml.safe_load(stream)
+          manifests[parsed['metadata']['name']]=Helm( 
+            parsed['spec']['chart']['repository'],
+            parsed['spec']['chart']['name'],
+            parsed['spec']['releaseName'],
+            parsed['spec']['targetNamespace'],
+            parsed['spec']['chart']['version'],
+            parsed['spec']['values'])
+        except yaml.YAMLError as exc:
+          print(exc)
+  os.system("rm  split_*")
+
+  return manifests
+
+def printhelp():
+    print('Usage: template APP_MANIFEST')
+
+def main(argv):
+  if (len(sys.argv)!=2):
+    printhelp()
+    sys.exit(-1)
+
+  try:
+    manifests=load_manifest(sys.argv[1], TEMPDIR)
+
+    template_yaml(manifests)
+  except yaml.YAMLError as exc:
+    print(exc)
+
+
+if __name__ == "__main__":
+  main(sys.argv[1:])
+  
