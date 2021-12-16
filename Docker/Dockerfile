@@ -1,4 +1,4 @@
-FROM python
+FROM python:3.11.0a1-slim-bullseye
 
 ENV KUSTOMIZE_PLUGIN_HOME /root/.config/kustomize/plugin
 COPY Docker/src /
