@@ -57,7 +57,7 @@ class Helm:
       .format(self.namespace, self.name, self.chart, self.version))
     os.system('helm repo rm monstarrepo | grep -i error')
 
-  def generateSeperatedResources(self, targetdir='tmp'):
+  def generateSeperatedResources(self, targetdir='/cd'):
     yaml.dump(self.override, open('vo', 'w') , default_flow_style=False)
     print('[generate {} from {} as {} in {}]'.
       format(self.chart, self.repo, self.name, self.namespace))
@@ -67,8 +67,26 @@ class Helm:
     os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo > {4}/{1}.plain.yaml'
       .format(self.namespace, self.name, self.chart, self.version, targetdir))
     target = '{}/{}'.format(targetdir, self.name)
-    splitcmd = "awk '{f=\""+target+"/_\" NR; print $0 > f}' RS='---' "+target+".plain.yaml"
+    splitcmd = "awk '{f=\""+target+"/_\" NR; print $0 > f}' RS='\n---\n' "+target+".plain.yaml"
     os.system(splitcmd)
+    for entry in os.scandir(target):
+      refinedname =''
+      with open(entry, 'r') as stream:
+        try:
+          parsed = yaml.safe_load(stream)
+          refinedname = '{}_{}.yaml'.format(parsed['kind'],parsed['metadata']['name'])
+        except yaml.YAMLError as exc:
+          print(exc, parsed)
+        except TypeError as exc:
+          if (self.name != '_1' ):
+            print(exc, parsed)
+      if (refinedname!=''):
+        os.rename(entry, target+'/'+refinedname)
+      else: 
+        os.remove(entry)
+
+
     # os.system("""awk '{f="tmp/{0}/_" NR; print $0 > f}' RS='---' tmp/{0}.plain.yaml""".format(self.name))
     os.system("rm {}/{}.plain.yaml".format(targetdir, self.name))
     os.system('helm repo rm monstarrepo | grep -i error')
+

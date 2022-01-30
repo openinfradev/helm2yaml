@@ -1,0 +1,63 @@
+#!/usr/local/bin/python3
+from applib.helm import Helm
+from applib.repo import Repo, RepoType
+import sys, yaml, os, time, getopt
+from common import *
+
+TEMPDIR="tmp"
+
+def printhelp():
+  print(('''
+    Usage:{0} -m APP_MANIFEST [-w WORK_FOLW_NAME] [-v] [-t] [-o OUTPUT_DIR_FOR_YAMLS] [-k KUBE_CONFIG]
+     --verbose=LEVEL define a verbos level
+     -v verbos mode (it is same with --verbose=1)
+     -t generate specific resources to OUTPUT_DIR_FOR_YAMLS
+     -k --kubeconfig=KUBE_CONFIG necessary to access your k8s cluster
+     -o --output=OUTPUT_DIR_FOR_YAMLS
+    Examples:
+     - {0} -m lma_manifest.yaml -w fed -v
+     - {0} -m lma_manifest.yaml -o gen
+    ''').format(sys.argv[0]))
+
+def main(argv):
+  manifest=''
+  wf='default'
+  decapod_splited_yamls=True
+  verbose=0
+  out_dir='cd'
+
+  try:
+    opts, args = getopt.getopt(argv,"htm:w:vo:",["manifest=","workflow=","verbose=","output="])
+  except getopt.GetoptError:
+    printhelp()
+    sys.exit(-1)
+  
+  for opt, arg in opts:
+    if opt == '-h':
+      printhelp()
+      sys.exit(0)
+    elif opt in ("-m", "--manifest"):
+      manifest = arg
+    elif opt in ("-w", "--workflow"):
+      wf = arg
+    elif opt == "-v":
+      verbose=1
+    elif opt == "--verbose":
+      verbose = int(arg)
+    elif opt in ("-o", "--output"):
+      out_dir = arg
+
+  if (manifest==''):
+    printhelp()
+    sys.exit(-1)
+
+  manifests=load_manifest(manifest)
+  if verbose > 0:
+    print('(DEBUG) loaded manifest:',manifests)
+    for key in manifests.keys():
+      print(key, manifests[key])
+
+  template_yaml(manifests, out_dir, verbose)
+
+if __name__ == "__main__":
+  main(sys.argv[1:])
