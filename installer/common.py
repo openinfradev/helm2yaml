@@ -44,6 +44,12 @@ def load_manifest(manifest):
       with open(entry, 'r') as stream:
         try:
           parsed = yaml.safe_load(stream)
+
+          if parsed.get('spec') == None:
+            print('--- Warn: A invalid resource is given  ---')
+            print(parsed)
+            print('--- Warn END ---')
+            continue
           if parsed['spec']['chart'].get('type')!=None:
             repotype = RepoType.HELMREPO
             if parsed['spec']['chart'].get('type')=='git':
