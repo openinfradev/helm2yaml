@@ -34,8 +34,7 @@ class Repo:
     if self.repotype == RepoType.HELMREPO:
       return self.chartOrPath
     else: 
-      return self.chartOrPath
-      # return None
+      return None
   def path(self):
     if self.repotype == RepoType.GIT:
       return self.chartOrPath
@@ -44,10 +43,6 @@ class Repo:
 
   def repository(self):
     return self.repo
-    # if self.repotype == RepoType.GIT:
-    #   return self.versionOrReference
-    # else: 
-    #   return None
   
   def getUrl(self):
     if self.repotype == RepoType.GIT and self.repo.startswith('git@'):
@@ -125,6 +120,9 @@ class Repo:
     else:
       print('GIT CLONE and apply')
 
+  # TODO: Is this deprecated? #
+  # TODO: Is this deprecated? #
+  # TODO: Is this deprecated? #
   def toSeperatedResources(self, name, namespace, override, targetdir='/cd', verbose=0):
     yaml.dump(override, open('vo', 'w') , default_flow_style=False)
     print('[generate resource yamls {} from {} as {} in {}]'.
@@ -187,62 +185,3 @@ class Repo:
       print('(WARN) '+self.getUrl())
       print('(WARN) '+self.repotype)
 
-  def genTemplateFile(self, name, namespace, override, verbose=0):
-    yaml.dump(override, open('vo', 'w') , default_flow_style=False)
-    print('[generate resource yamls {} from {} as {} in {}]'.
-      format(self.chart(), self.repository(), name, namespace))
-
-    if self.repotype == RepoType.HELMREPO:
-      # prepare repository
-      if verbose > 0:
-        print('(DEBUG) Register repository:: helm repo add monstarrepo {}'
-          .format(self.repository()))
-      os.system('helm repo add monstarrepo {} | grep -i error'
-        .format(self.repository()))
-
-      # generate template file
-      if verbose > 0:
-        print('(DEBUG) gernerat a template file')
-      if name.endswith('-operator'):
-        os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo --include-crds  > {1}.plain.yaml'
-          .format(namespace, name, self.chart(), self.version()))
-      else:
-        os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo > {1}.plain.yaml'
-          .format(namespace, name, self.chart(), self.version()))
-
-      # clean reposiotry
-      os.system('helm repo rm monstarrepo | grep -i error')
-    elif self.repotype == RepoType.GIT:
-      # prepare repository
-      if verbose > 0:
-        print('(DEBUG) git clone -b {0} {1} .temporary-clone'.format(self.versionOrReference, self.getUrl()))
-        os.system('git clone -b {0} {1} .temporary-clone'
-          .format(self.reference(), self.getUrl()))
-        if verbose > 2:
-          print('(DEBUG) Cloned dir :')
-          os.system('ls -al .temporary-clone')
-      else:
-        os.system('git clone -b {0} {1} .temporary-clone </dev/null 2>t; cat t | grep fatal; rm t'
-          .format(self.versionOrReference, self.getUrl()))
-
-      os.system('helm dependency update .temporary-clone/{}'.format(self.path()))
-      # generate template file
-      if verbose > 0:
-        print('(DEBUG) gernerat a template file')
-        print('(DEBUG) helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'
-          .format(namespace, name, self.path()))
-      if name.endswith('-operator'):
-        os.system('helm template -n {0} {1} .temporary-clone/{2} -f vo --include-crds  > {1}.plain.yaml'
-          .format(namespace, name, self.path()))
-      else:
-        os.system('helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'
-          .format(namespace, name, self.path()))
-
-      # clean reposiotry
-      os.system('rm -rf .temporary-clone')
-      # os.system('mv .temporary-clone '+name)
-    else:
-      print('(WARN) I CANNOT APPLY THIS. (email me - usnexp@gmail)')
-      print('(WARN) '+self.getUrl())
-      print('(WARN) '+self.repotype)
-    return (name+'.plain.yaml')

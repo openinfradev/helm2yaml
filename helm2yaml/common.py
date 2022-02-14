@@ -2,11 +2,11 @@ from applib.helm import Helm
 from applib.repo import Repo, RepoType
 import sys, yaml, os, time, getopt
 
-def template_yaml(manifests, gdir='cd', verbose=False):
-  for chart in manifests.keys():
+def template_yaml(manifests, gdir='/output', verbose=False):
+  for app in manifests.keys():
     if verbose>0:
-      print('(DEBUG) Generate resource yamls from {}'.format(chart))
-    manifests[chart].toSeperatedResources(gdir, verbose)
+      print('(DEBUG) Generate resource yamls for {}'.format(app))
+    manifests[app].toSeperatedResources(gdir, verbose)
 
 def install_and_check_done(manifests, install, config, verbose=False, kubeconfig='~/.kube/config'):
   # os.system("helm install -n monstar {} monstarrepo/{} -f vo".format())
@@ -52,6 +52,9 @@ def load_manifest(manifest):
             continue
           if parsed['spec']['chart'].get('type')!=None:
             repotype = RepoType.HELMREPO
+            # TODO: fix wrong logic here
+            # TODO: fix wrong logic here
+            # TODO: fix wrong logic here
             if parsed['spec']['chart'].get('type')=='git':
               repotype = RepoType.GIT
             repo = Repo(
