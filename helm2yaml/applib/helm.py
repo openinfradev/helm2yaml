@@ -52,7 +52,14 @@ class Helm:
 
     # For crd-only argoCD app, just copy crd files into output directory
     if self.name.endswith('-crds'):
+      print('[Copy CRD yamls for {} from {}/{}]'.
+      format(self.name, self.repo.repository(), self.repo.chart()))
+
       os.system('helm repo add monstarrepo {} | grep -i error'.format(self.repo.repository()))
+
+      # Pull helm chart from chart repo
+      if verbose > 0:
+        print('(DEBUG) Pull helm chart: helm pull monstarrepo/{} --version {}'.format(self.repo.chart(), self.repo.version()))
       os.system('helm pull monstarrepo/{} --version {} | grep -i error'.format(self.repo.chart(), self.repo.version()))
 
       # Untar chart tarball file
@@ -102,7 +109,7 @@ class Helm:
 
   def genTemplateFile(self, verbose=0):
     yaml.dump(self.override, open('vo', 'w') , default_flow_style=False)
-    print('[generate resource yamls for {} from {}/{} in {}]'.
+    print('[Generate resource yamls for {} from {}/{} in {}]'.
       format(self.name, self.repo.repository(), self.repo.chart(), self.namespace))
 
     if self.repo.repotype == RepoType.HELMREPO:

@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/local/bin/python3
 from applib.helm import Helm
 from applib.repo import Repo, RepoType
 import sys, yaml, os, time, getopt
@@ -51,13 +51,14 @@ def main(argv):
     printhelp()
     sys.exit(-1)
 
-  manifests=load_manifest(manifest)
+  print('Load manifest:', manifest)
+  loaded_manifest=load_manifest(manifest)
   if verbose > 0:
-    print('(DEBUG) loaded manifest:',manifests)
-    for key in manifests.keys():
-      print(key, manifests[key])
+    print('(DEBUG) Loaded manifest:', loaded_manifest)
+    for key in loaded_manifest.keys():
+      print(key, loaded_manifest[key])
 
-  template_yaml(manifests, out_dir, verbose)
+  template_yaml(loaded_manifest, out_dir, verbose)
 
 if __name__ == "__main__":
   main(sys.argv[1:])
