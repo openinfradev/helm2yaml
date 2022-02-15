@@ -51,27 +51,29 @@ def load_manifest(manifest):
             print('--- Warn END ---')
             continue
           if parsed['spec']['chart'].get('type')!=None:
-            repotype = RepoType.HELMREPO
-            # TODO: fix wrong logic here
-            # TODO: fix wrong logic here
-            # TODO: fix wrong logic here
-            if parsed['spec']['chart'].get('type')=='git':
-              repotype = RepoType.GIT
-            repo = Repo(
-              repotype,
-              parsed['spec']['chart']['repository'],
-              parsed['spec']['chart']['name'],
-              parsed['spec']['chart']['version'])
+            if parsed['spec']['chart'].get('type')=='helmrepo':
+              repo = Repo(
+                # repotype, repo, chartOrPath, versionOrReference)
+                RepoType.HELMREPO,
+                parsed['spec']['chart']['repository'],
+                parsed['spec']['chart']['name'],
+                parsed['spec']['chart']['version'])
+            elif parsed['spec']['chart'].get('type')=='git':
+              repo = Repo(
+                RepoType.GIT,
+                parsed['spec']['chart']['git'],
+                parsed['spec']['chart']['path'],
+                parsed['spec']['chart']['ref'])
+            else:
+              print('Wrong repo type: {}'.format(parsed['spec']['chart'].get('type')))
           elif parsed['spec']['chart'].get('git')!=None:
             repo = Repo(
-              # repotype, repo, chartOrPath, versionOrReference):
               RepoType.GIT,
               parsed['spec']['chart']['git'],
               parsed['spec']['chart']['path'],
               parsed['spec']['chart']['ref'])
           elif parsed['spec']['chart'].get('repository')!=None:
             repo = Repo(
-              # repotype, repo, chartOrPath, versionOrReference):
               RepoType.HELMREPO,
               parsed['spec']['chart']['repository'],
               parsed['spec']['chart']['name'],
