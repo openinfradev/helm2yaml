@@ -71,6 +71,7 @@ class Helm:
       os.system('cp {}/crds/* {}/{}/'.format(self.repo.chart(), targetdir, self.name))
       # Cleanup
       os.system('rm -rf ./{}'.format(self.repo.chart()))
+      os.system('helm repo rm monstarrepo | grep -i error')
 
     # For general argoCD app, render helm chart into single manifest yaml
     else:
