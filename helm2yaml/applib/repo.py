@@ -56,12 +56,6 @@ class Repo:
     else:
       return None
 
-  # def getBase(self):
-  #   if self.repotype == RepoType.GIT and self.repo.startswith('git@'):
-  #     return self.repo.replace(':','/').replace('git@','https://')+'.git'
-  #   else:
-  #     return None
-
   def install(self, name, namespace, override, verbose=0, kubeconfig='~/.kube/config' ):
     yaml.dump(override, open('vo', 'w') , default_flow_style=False)
     print('[install {} from {} as {} in {}]'.
@@ -120,68 +114,4 @@ class Repo:
     else:
       print('GIT CLONE and apply')
 
-  # TODO: Is this deprecated? #
-  # TODO: Is this deprecated? #
-  # TODO: Is this deprecated? #
-  def toSeperatedResources(self, name, namespace, override, targetdir='/cd', verbose=0):
-    yaml.dump(override, open('vo', 'w') , default_flow_style=False)
-    print('[generate resource yamls {} from {} as {} in {}]'.
-      format(self.chart(), self.repository(), name, namespace))
-
-    if self.repotype == RepoType.HELMREPO:
-      os.system('helm repo add monstarrepo {} | grep -i error'
-        .format(self.repository()))
-      os.system('mkdir -p {}/{}'.format(targetdir, name))
-
-      if verbose > 0:
-        print('(DEBUG) gernerat a template file')
-
-      if name.endswith('-operator'):
-        os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo --include-crds  > {4}/{1}.plain.yaml'
-          .format(namespace, name, self.chart(), self.version(), targetdir))
-      else:
-        os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo > {4}/{1}.plain.yaml'
-          .format(namespace, name, self.chart(), self.version(), targetdir))
-
-      if verbose > 0:
-        print('(DEBUG) seperate the template file')
-      target = '{}/{}'.format(targetdir, name)
-      splitcmd = "awk '{f=\""+target+"/_\" NR; print $0 > f}' RS='\n---\n' "+target+".plain.yaml"
-      os.system(splitcmd)
-      
-      if verbose > 0:
-        print('(DEBUG) rename resource yaml files')
-      for entry in os.scandir(target):
-        refinedname =''
-        with open(entry, 'r') as stream:
-          try:
-            parsed = yaml.safe_load(stream)
-            refinedname = '{}_{}.yaml'.format(parsed['kind'],parsed['metadata']['name'])
-          except yaml.YAMLError as exc:
-            print('(WARN)',exc,":::", parsed)
-          except TypeError as exc:
-            if os.path.getsize(entry)>80:
-              print('(WARN)',exc,":::", parsed)
-              if verbose > 0:
-                print("(DEBUG) Contents in the file :", entry.name)
-                print(stream.readlines())
-        if (refinedname!=''):
-          os.rename(entry, target+'/'+refinedname)
-        else: 
-          os.remove(entry)
-
-      # os.system("""awk '{f="tmp/{0}/_" NR; print $0 > f}' RS='---' tmp/{0}.plain.yaml""".format(name))
-      os.system("rm {}/{}.plain.yaml".format(targetdir, name))
-      os.system('helm repo rm monstarrepo | grep -i error')
-    elif self.repotype == RepoType.GIT:
-      if verbose > 0:
-        print('git clone -b {0} {1} .temporary-clone'.format(self.versionOrReference, self.getUrl()))
-      os.system('git clone -b {0} {1} .temporary-clone </dev/null 2>t; cat t | grep fatal; rm t'
-        .format(self.versionOrReference, self.getUrl()))
-
-      os.system('rm -rf .temporary-clone')
-    else:
-      print('(WARN) I CANNOT APPLY THIS. (email me - usnexp@gmail)')
-      print('(WARN) '+self.getUrl())
-      print('(WARN) '+self.repotype)
 
