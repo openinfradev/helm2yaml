@@ -2,11 +2,11 @@ from applib.helm import Helm
 from applib.repo import Repo, RepoType
 import sys, yaml, os, time, getopt
 
-def template_yaml(manifests, gdir='cd', verbose=False):
-  for chart in manifests.keys():
+def template_yaml(manifests, gdir='/output', verbose=False):
+  for app in manifests.keys():
     if verbose>0:
-      print('(DEBUG) Generate resource yamls from {}'.format(chart))
-    manifests[chart].toSeperatedResources(gdir, verbose)
+      print('(DEBUG) Generate resource yamls for {}'.format(app))
+    manifests[app].toSeperatedResources(gdir, verbose)
 
 def install_and_check_done(manifests, install, config, verbose=False, kubeconfig='~/.kube/config'):
   # os.system("helm install -n monstar {} monstarrepo/{} -f vo".format())
@@ -51,24 +51,29 @@ def load_manifest(manifest):
             print('--- Warn END ---')
             continue
           if parsed['spec']['chart'].get('type')!=None:
-            repotype = RepoType.HELMREPO
-            if parsed['spec']['chart'].get('type')=='git':
-              repotype = RepoType.GIT
-            repo = Repo(
-              repotype,
-              parsed['spec']['chart']['repository'],
-              parsed['spec']['chart']['name'],
-              parsed['spec']['chart']['version'])
+            if parsed['spec']['chart'].get('type')=='helmrepo':
+              repo = Repo(
+                # repotype, repo, chartOrPath, versionOrReference)
+                RepoType.HELMREPO,
+                parsed['spec']['chart']['repository'],
+                parsed['spec']['chart']['name'],
+                parsed['spec']['chart']['version'])
+            elif parsed['spec']['chart'].get('type')=='git':
+              repo = Repo(
+                RepoType.GIT,
+                parsed['spec']['chart']['git'],
+                parsed['spec']['chart']['path'],
+                parsed['spec']['chart']['ref'])
+            else:
+              print('Wrong repo type: {}'.format(parsed['spec']['chart'].get('type')))
           elif parsed['spec']['chart'].get('git')!=None:
             repo = Repo(
-              # repotype, repo, chartOrPath, versionOrReference):
               RepoType.GIT,
               parsed['spec']['chart']['git'],
               parsed['spec']['chart']['path'],
               parsed['spec']['chart']['ref'])
           elif parsed['spec']['chart'].get('repository')!=None:
             repo = Repo(
-              # repotype, repo, chartOrPath, versionOrReference):
               RepoType.HELMREPO,
               parsed['spec']['chart']['repository'],
               parsed['spec']['chart']['name'],
