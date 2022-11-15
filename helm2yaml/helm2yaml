@@ -14,6 +14,10 @@ def printhelp():
      -t generate specific resources to OUTPUT_DIR_FOR_YAMLS
      -k --kubeconfig=KUBE_CONFIG necessary to access your k8s cluster
      -o --output=OUTPUT_DIR_FOR_YAMLS
+     -g --imagerepo=LOCAL_IMAGE_REPO
+     -l --helmrepo=LOCAL_HELM_REPO
+     -n ignore local error (ex. 1 chart is not exist)
+
     Examples:
      - {0} -m lma_manifest.yaml -w fed -v
      - {0} -m lma_manifest.yaml -o gen
@@ -25,9 +29,12 @@ def main(argv):
   decapod_splited_yamls=True
   verbose=0
   out_dir='cd'
+  local_image_repo=None
+  local_helm_repo=None
+  flag_ignore_error=False
 
   try:
-    opts, args = getopt.getopt(argv,"htm:w:vo:",["manifest=","workflow=","verbose=","output="])
+    opts, args = getopt.getopt(argv,"htm:w:vo:g:l:",["manifest=","workflow=","verbose=","output=","imagerepo=","helmrepo="])
   except getopt.GetoptError:
     printhelp()
     sys.exit(-1)
@@ -46,6 +53,12 @@ def main(argv):
       verbose = int(arg)
     elif opt in ("-o", "--output"):
       out_dir = arg
+    elif opt in ("-g", "--imagerepo"):
+      local_image_repo = arg
+    elif opt in ("-l", "--helmrepo"):
+      local_helm_repo = arg
+    elif opt == "-i":
+      flag_ignore_error = True
 
   if (manifest==''):
     printhelp()
