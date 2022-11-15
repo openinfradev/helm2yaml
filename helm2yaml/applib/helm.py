@@ -55,12 +55,10 @@ class Helm:
       print('[Copy CRD yamls for {} from {}/{}]'.
       format(self.name, self.repo.repository(), self.repo.chart()))
 
-      os.system('helm repo add monstarrepo {} | grep -i error'.format(self.repo.repository()))
-
       # Pull helm chart from chart repo
       if verbose > 0:
-        print('(DEBUG) Pull helm chart: helm pull monstarrepo/{} --version {}'.format(self.repo.chart(), self.repo.version()))
-      os.system('helm pull monstarrepo/{} --version {} | grep -i error'.format(self.repo.chart(), self.repo.version()))
+        print('(DEBUG) Pull helm chart: helm pull --repo  {} {} --version {}'.format(self.repo.repository(), self.repo.chart(), self.repo.version()))
+      os.system('helm pull --repo {} {} --version {} | grep -i error'.format(self.repo.repository(), self.repo.chart(), self.repo.version()))
 
       # Untar chart tarball file
       if verbose > 0:
@@ -71,7 +69,6 @@ class Helm:
       os.system('cp {}/crds/* {}/{}/'.format(self.repo.chart(), targetdir, self.name))
       # Cleanup
       os.system('rm -rf ./{}'.format(self.repo.chart()))
-      os.system('helm repo rm monstarrepo | grep -i error')
 
     # For general argoCD app, render helm chart into single manifest yaml
     else:
@@ -114,21 +111,13 @@ class Helm:
       format(self.name, self.repo.repository(), self.repo.chart(), self.namespace))
 
     if self.repo.repotype == RepoType.HELMREPO:
-      # prepare repository
-      if verbose > 0:
-        print('(DEBUG) Register repository:: helm repo add monstarrepo {}'
-          .format(self.repo.repository()))
-      os.system('helm repo add monstarrepo {} | grep -i error'.format(self.repo.repository()))
-
       # Generate template file
       if verbose > 0:
         print('(DEBUG) gernerate template file')
 
-      os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo > {1}.plain.yaml'
-          .format(self.namespace, self.name, self.repo.chart(), self.repo.version()))
+      os.system('helm template -n {0} {1} --rpo {2} {3} --version {4} -f vo > {1}.plain.yaml'
+          .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
 
-      # clean reposiotry
-      os.system('helm repo rm monstarrepo | grep -i error')
     elif self.repo.repotype == RepoType.GIT:
       # prepare repository
       if verbose > 0:
@@ -166,19 +155,17 @@ class Helm:
       format(self.chart(), self.repository(), name, namespace))
 
     if self.repotype == RepoType.HELMREPO:
-      os.system('helm repo add monstarrepo {} | grep -i error'
-        .format(self.repository()))
       os.system('mkdir -p {}/{}'.format(targetdir, name))
 
       if verbose > 0:
         print('(DEBUG) gernerate a template file')
 
       if name.endswith('-operator'):
-        os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo --include-crds  > {4}/{1}.plain.yaml'
-          .format(namespace, name, self.chart(), self.version(), targetdir))
+        os.system('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo --include-crds  > {5}/{1}.plain.yaml'
+          .format(namespace, name, self.repo.repository(), self.chart(), self.version(), targetdir))
       else:
-        os.system('helm template -n {0} {1} monstarrepo/{2} --version {3} -f vo > {4}/{1}.plain.yaml'
-          .format(namespace, name, self.chart(), self.version(), targetdir))
+        os.system('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {5}/{1}.plain.yaml'
+          .format(namespace, name, self.repo.repository(), self.chart(), self.version(), targetdir))
 
       if verbose > 0:
         print('(DEBUG) seperate the template file')
@@ -209,7 +196,6 @@ class Helm:
 
       # os.system("""awk '{f="tmp/{0}/_" NR; print $0 > f}' RS='---' tmp/{0}.plain.yaml""".format(name))
       os.system("rm {}/{}.plain.yaml".format(targetdir, name))
-      os.system('helm repo rm monstarrepo | grep -i error')
     elif self.repotype == RepoType.GIT:
       if verbose > 0:
         print('git clone -b {0} {1} temporary-clone'.format(self.versionOrReference, self.getUrl()))
