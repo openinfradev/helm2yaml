@@ -2,11 +2,11 @@ from applib.helm import Helm
 from applib.repo import Repo, RepoType
 import sys, yaml, os, time, getopt
 
-def template_yaml(manifests, gdir='/output', verbose=False):
+def template_yaml(manifests, gdir='/output', verbose=False, local_repository=None):
   for app in manifests.keys():
     if verbose>0:
       print('(DEBUG) Generate resource yamls for {}'.format(app))
-    manifests[app].toSeperatedResources(gdir, verbose)
+    manifests[app].toSeperatedResources(gdir, verbose, local_repository)
 
 def install_and_check_done(manifests, install, config, verbose=False, kubeconfig='~/.kube/config'):
   # os.system("helm install -n monstar {} monstarrepo/{} -f vo".format())
@@ -82,7 +82,7 @@ def load_manifest(manifest):
             print('Wrong repo {0}',parsed)
 
           # self, repo, name, namespace, override):
-          manifests[parsed['metadata']['name']]=Helm( 
+          manifests[parsed['metadata']['name']]=Helm(
             repo,
             parsed['spec']['releaseName'],
             parsed['spec']['targetNamespace'],

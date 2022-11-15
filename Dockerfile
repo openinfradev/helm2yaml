@@ -1,10 +1,8 @@
 FROM sktcloud/decapod-kustomize:v2.0.0 AS gobuilder
-LABEL AUTHOR Seungkyu Ahn (seungkyua@gmail.com)
-
-
+LABEL AUTHOR sktelecom
 
 FROM python:3.10.5-alpine3.16 AS builder
-LABEL AUTHOR Seungkyu Ahn (seungkyua@gmail.com)
+LABEL AUTHOR sktelecom
 
 ENV HELM_VER v3.9.0
 ENV GH_VER 2.11.3
@@ -18,9 +16,8 @@ RUN curl -sL -o gh.tar.gz https://github.com/cli/cli/releases/download/v${GH_VER
     tar xf gh.tar.gz && \
     mv gh_2.11.3_linux_amd64/bin/gh /usr/local/bin/gh
 
-
 FROM python:3.10.5-alpine3.16
-LABEL AUTHOR Seungkyu Ahn (seungkyua@gmail.com)
+LABEL AUTHOR sktelecom
 
 ENV PATH /root/helm2yaml:$PATH
 
