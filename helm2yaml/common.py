@@ -35,7 +35,7 @@ def install_and_check_done(manifests, install, config, verbose=False, kubeconfig
     time.sleep(cinterval)
   return
 
-def load_manifest(manifest):
+def load_manifest(manifest, local_repository=None):
   os.system("awk '{f=\"split_\" NR; print $0 > f}' RS='---' "+manifest)
 
   manifests = dict()
@@ -80,6 +80,9 @@ def load_manifest(manifest):
               parsed['spec']['chart']['version'])
           else:
             print('Wrong repo {0}',parsed)
+
+          if local_repository != None:
+            repo.repo = local_repository
 
           # self, repo, name, namespace, override):
           manifests[parsed['metadata']['name']]=Helm(

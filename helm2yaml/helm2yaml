@@ -65,7 +65,7 @@ def main(argv):
     sys.exit(-1)
 
   print('Load manifest:', manifest)
-  loaded_manifest=load_manifest(manifest)
+  loaded_manifest=load_manifest(manifest, local_helm_repo)
   if verbose > 0:
     print('(DEBUG) Loaded manifest:', loaded_manifest)
     for key in loaded_manifest.keys():
