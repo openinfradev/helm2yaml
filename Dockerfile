@@ -26,7 +26,7 @@ ENV PATH /root/helm2yaml:$PATH
 
 USER root
 RUN mkdir -p /root/.config/kustomize/plugin/openinfradev.github.com/v1/helmvaluestransformer
-RUN apk add --no-cache bash git
+RUN apk add --no-cache bash git curl
 COPY --from=gobuilder /root/.config/kustomize/plugin/openinfradev.github.com/v1/helmvaluestransformer/HelmValuesTransformer.so /root/.config/kustomize/plugin/openinfradev.github.com/v1/helmvaluestransformer/
 COPY --from=gobuilder /usr/local/bin/kustomize /usr/local/bin/kustomize
 
