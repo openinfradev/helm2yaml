@@ -18,6 +18,12 @@ class Helm:
   #     return None
     return True
 
+  def toString(self):
+    return('[HELM: {}, {}, {}, {}]'.format(    self.repo.toString(),
+      self.name,
+      self.namespace,
+      self.override))
+
   def autoApplyPrerequisitions(self):
     return True
 
@@ -155,6 +161,45 @@ class Helm:
         else:
           os.remove(entry)
 
+  def get_image_list(self, verbose=False):
+
+    # For crd-only argoCD app, just copy crd files into output directory
+    if self.name.endswith('-crds'):
+      print(f'[do nothing for {self.name}]')
+      return []
+
+    fd=open(self.genTemplateFile(verbose))
+    image_list=[]
+
+    for parsed in list(yaml.load_all(fd, Loader=yaml.loader.SafeLoader)):
+      if parsed is not None and 'spec' in parsed:
+        spec = parsed['spec']
+        if 'template' in spec:
+          template = spec['template']
+          if 'spec' in template:
+            spec = template['spec']
+            if 'containers' in spec:
+              for container in spec['containers']:
+                if verbose > 0:
+                  print("Case 1 - container: {}".format(container['image']))
+                image_list.append(container['image'])
+            if 'initContainers' in spec:
+              for initcontainer in spec['initContainers']:
+                if verbose > 0:
+                  print("Case 2 - Init container: {}".format(initcontainer['image']))
+                image_list.append(initcontainer['image'])
+        if 'containers' in spec:
+          for container in spec['containers']:
+            if verbose > 0:
+              print("Case 3 - spec container: {}".format(container['image']))
+              image_list.append(container['image'])
+        if 'image' in spec:
+          if verbose > 0:
+            print("Case 4 - spec image: {}".format(spec['image']))
+          image_list.append(spec['image'])
+
+    return image_list
+
   def genTemplateFile(self, verbose=0):
     yaml.dump(self.override, open('vo', 'w') , default_flow_style=False)
     print('[Generate resource yamls for {} from {}/{} in {}]'.
@@ -164,6 +209,9 @@ class Helm:
       # Generate template file
       if verbose > 0:
         print('(DEBUG) gernerate template file')
+        print(self.toString())
+        print('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
+          .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
 
       os.system('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
           .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
@@ -185,8 +233,6 @@ class Helm:
       # generate template file
       if verbose > 0:
         print('(DEBUG) gernerat a template file')
-        print('(DEBUG) helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'
-          .format(self.namespace, self.name, self.repo.path()))
 
       os.system('helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'
           .format(self.namespace, self.name, self.repo.path()))
