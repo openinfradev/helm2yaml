@@ -183,12 +183,12 @@ class Helm:
                 if verbose > 0:
                   print("Case 1 - container: {}".format(container['image']))
                 image_list.append(container['image'])
-            if 'initContainers' in spec:
+            if 'initContainers' in spec and spec.get('initContainers',False):
               for initcontainer in spec['initContainers']:
                 if verbose > 0:
                   print("Case 2 - Init container: {}".format(initcontainer['image']))
                 image_list.append(initcontainer['image'])
-        if 'containers' in spec:
+        if 'containers' in spec and spec.get('containers',False):
           for container in spec['containers']:
             if verbose > 0:
               print("Case 3 - spec container: {}".format(container['image']))
