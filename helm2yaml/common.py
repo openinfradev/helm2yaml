@@ -35,65 +35,88 @@ def install_and_check_done(manifests, install, config, verbose=False, kubeconfig
     time.sleep(cinterval)
   return
 
-def load_manifest(manifest, local_repository=None):
-  os.system("awk '{f=\"split_\" NR; print $0 > f}' RS='---' "+manifest)
-
+def load_manifest(fd, local_repository=None, verbose=0):
   manifests = dict()
-  for entry in os.scandir():
-    if entry.name.startswith('split_'):
-      with open(entry, 'r') as stream:
-        try:
-          parsed = yaml.safe_load(stream)
 
-          if parsed.get('spec') == None:
-            print('--- Warn: A invalid resource is given  ---')
-            print(parsed)
-            print('--- Warn END ---')
-            continue
-          if parsed['spec']['chart'].get('type')!=None:
-            if parsed['spec']['chart'].get('type')=='helmrepo':
-              repo = Repo(
-                # repotype, repo, chartOrPath, versionOrReference)
-                RepoType.HELMREPO,
-                parsed['spec']['chart']['repository'],
-                parsed['spec']['chart']['name'],
-                parsed['spec']['chart']['version'])
-            elif parsed['spec']['chart'].get('type')=='git':
-              repo = Repo(
-                RepoType.GIT,
-                parsed['spec']['chart']['git'],
-                parsed['spec']['chart']['path'],
-                parsed['spec']['chart']['ref'])
-            else:
-              print('Wrong repo type: {}'.format(parsed['spec']['chart'].get('type')))
-          elif parsed['spec']['chart'].get('git')!=None:
-            repo = Repo(
-              RepoType.GIT,
-              parsed['spec']['chart']['git'],
-              parsed['spec']['chart']['path'],
-              parsed['spec']['chart']['ref'])
-          elif parsed['spec']['chart'].get('repository')!=None:
-            repo = Repo(
-              RepoType.HELMREPO,
-              parsed['spec']['chart']['repository'],
-              parsed['spec']['chart']['name'],
-              parsed['spec']['chart']['version'])
-          else:
-            print('Wrong repo {0}',parsed)
+  for parsed in list(yaml.load_all(fd, Loader=yaml.loader.SafeLoader)):
+    if parsed.get('spec') == None:
+      print('--- Warn: A invalid resource is given  ---')
+      print(parsed)
+      print('--- Warn END ---')
+      continue
+    if parsed['spec']['chart'].get('type')!=None:
+      if parsed['spec']['chart'].get('type')=='helmrepo':
+        repo = Repo(
+          # repotype, repo, chartOrPath, versionOrReference)
+          RepoType.HELMREPO,
+          parsed['spec']['chart']['repository'],
+          parsed['spec']['chart']['name'],
+          parsed['spec']['chart']['version'])
+      elif parsed['spec']['chart'].get('type')=='git':
+        repo = Repo(
+          RepoType.GIT,
+          parsed['spec']['chart']['git'],
+          parsed['spec']['chart']['path'],
+          parsed['spec']['chart']['ref'])
+      else:
+        print('Wrong repo type: {}'.format(parsed['spec']['chart'].get('type')))
+    elif parsed['spec']['chart'].get('git')!=None:
+      repo = Repo(
+        RepoType.GIT,
+        parsed['spec']['chart']['git'],
+        parsed['spec']['chart']['path'],
+        parsed['spec']['chart']['ref'])
+    elif parsed['spec']['chart'].get('repository')!=None:
+      repo = Repo(
+        RepoType.HELMREPO,
+        parsed['spec']['chart']['repository'],
+        parsed['spec']['chart']['name'],
+        parsed['spec']['chart']['version'])
+    else:
+      print('Wrong repo {0}',parsed)
 
-          if local_repository != None:
-            repo.repo = local_repository
+    if local_repository != None:
+      repo.repo = local_repository
 
-          # self, repo, name, namespace, override):
-          manifests[parsed['metadata']['name']]=Helm(
-            repo,
-            parsed['spec']['releaseName'],
-            parsed['spec']['targetNamespace'],
-            parsed['spec']['values'])
-        except yaml.YAMLError as exc:
-          print(exc)
-        except TypeError as exc:
-          print(exc)
-  os.system("rm  split_*")
+    # self, repo, name, namespace, override):
+    manifests[parsed['metadata']['name']]=Helm(
+      repo,
+      parsed['spec']['releaseName'],
+      parsed['spec']['targetNamespace'],
+      parsed['spec']['values'])
 
   return manifests
+
+def check_chart_repo(fd, target_repo, except_list=[], verbose=0):
+  invalid_dic=dict()
+
+  for parsed in list(yaml.load_all(fd, Loader=yaml.loader.SafeLoader)):
+    if (not parsed.get('spec').get('chart').get('repository').startswith(target_repo)) and (parsed.get('spec').get('chart').get('repository') not in except_list) :
+      invalid_dic[parsed.get('metadata').get('name')]=parsed.get('spec').get('chart').get('repository')
+
+      if verbose >= 1:
+        print('{} is defined with wrong repository: {}'.format(
+          parsed.get('metadata').get('name'),
+          parsed.get('spec').get('chart').get('repository')))
+
+  return invalid_dic
+
+def check_image_repo(fd, target_repo, except_list=[], verbose=0):
+  invalid_dic=dict()
+
+  helm_dic=load_manifest(fd)
+  if verbose > 0:
+    print('(DEBUG) Loaded manifest:', helm_dic)
+    for key in helm_dic.keys():
+      print(key, helm_dic[key])
+
+  for key in helm_dic.keys():
+    invalid_images=[]
+
+    for image_url in helm_dic[key].get_image_list(verbose):
+      if (not image_url.startswith(target_repo)) and ( image_url not in except_list) :
+        invalid_images.append(image_url)
+    if(len(invalid_images)>0):
+      invalid_dic[key]=invalid_images
+
+  return invalid_dic
