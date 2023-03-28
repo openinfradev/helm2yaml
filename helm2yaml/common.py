@@ -38,7 +38,7 @@ def install_and_check_done(manifests, install, config, verbose=False, kubeconfig
 def load_manifest(fn, local_repository=None, verbose=0):
   manifests = dict()
 
-  for parsed in list(yaml.load_all(open(fn,r), Loader=yaml.loader.SafeLoader)):
+  for parsed in list(yaml.load_all(open(fn,'r'), Loader=yaml.loader.SafeLoader)):
     if parsed.get('spec') == None:
       print('--- Warn: A invalid resource is given  ---')
       print(parsed)
@@ -90,7 +90,7 @@ def load_manifest(fn, local_repository=None, verbose=0):
 def check_chart_repo(fn, target_repo, except_list=[], verbose=0):
   invalid_dic=dict()
 
-  for parsed in list(yaml.load_all(open(fn,r), Loader=yaml.loader.SafeLoader)):
+  for parsed in list(yaml.load_all(open(fn,'r'), Loader=yaml.loader.SafeLoader)):
     if (not parsed.get('spec').get('chart').get('repository').startswith(target_repo)) and (parsed.get('spec').get('chart').get('repository') not in except_list) :
       invalid_dic[parsed.get('metadata').get('name')]=parsed.get('spec').get('chart').get('repository')
 
