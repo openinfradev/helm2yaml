@@ -113,7 +113,7 @@ class Helm:
       os.system('tar xf {}-{}.tgz'.format(self.repo.chart(), self.repo.version()))
 
       # Copy crd files into output directory
-      os.system('cp {}/crds/* {}/{}/'.format(self.repo.chart(), targetdir, self.name))
+      os.system('cp -r {}/crds/* {}/{}/'.format(self.repo.chart(), targetdir, self.name))
       # Cleanup
       os.system('rm -rf ./{}'.format(self.repo.chart()))
 
