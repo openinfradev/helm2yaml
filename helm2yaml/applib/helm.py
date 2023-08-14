@@ -206,15 +206,26 @@ class Helm:
       format(self.name, self.repo.repository(), self.repo.chart(), self.namespace))
 
     if self.repo.repotype == RepoType.HELMREPO:
-      # Generate template file
-      if verbose > 0:
-        print('(DEBUG) gernerate template file')
-        print(self.toString())
-        print('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
-          .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+      if (self.repo.repository().startswith('oci://')):
+        # Generate template file
+        if verbose > 0:
+          print('(DEBUG) gernerate template file')
+          print(self.toString())
+          print('helm template -n {0} {1} {2}/{3} --version {4} -f vo > {1}.plain.yaml'
+            .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
 
-      os.system('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
-          .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+        os.system('helm template -n {0} {1} {2}/{3} --version {4} -f vo > {1}.plain.yaml'
+            .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+      else:
+        # Generate template file
+        if verbose > 0:
+          print('(DEBUG) gernerate template file')
+          print(self.toString())
+          print('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
+            .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+
+        os.system('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
+            .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
 
     elif self.repo.repotype == RepoType.GIT:
       # prepare repository
