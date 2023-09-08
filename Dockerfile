@@ -35,3 +35,7 @@ COPY . ./
 RUN pip install -r requirements.txt
 
 CMD [ "/root/helm2yaml/helm2yaml" ]
+# sktcloud/decapod-render:v3.0.0 (23.8.14)
+# - support oci protocol for a helm repository
+# - generate CRDs using helm cli
+# Build CLI: docker build --network host -t siim/helm2yaml:v3.0.0 .
