@@ -6,7 +6,7 @@ Create k8s resources files based on the decapod manifest file derived from [helm
 > git clone https://github.com/openinfradev/helm2yaml.git
 > cd helm2yaml
 > pip install -r requirements.txt
-> helm2yaml/helm2yam -m lma_manifest.yaml -t -o gen
+> helm2yaml/helm2yaml -m lma_manifest.yaml -t -o gen
 ```
 
 ## Options
