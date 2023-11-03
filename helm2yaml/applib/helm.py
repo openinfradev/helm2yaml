@@ -96,32 +96,6 @@ class Helm:
     target = '{}/{}/'.format(targetdir, self.name)
     os.system('mkdir -p {}'.format(target))
 
-    # For crd-only argoCD app, just copy crd files into output directory
-    if self.name.endswith('-crds'):
-      print('[Copy CRD yamls for {} from {}/{}]'.
-          format(self.name, self.repo.repository(), self.repo.chart()))
-
-      # Pull helm chart from chart repo
-      if verbose > 0:
-        print('(DEBUG) Pull helm chart: helm pull --repo  {} {} --version {}'.format(self.repo.repository(), self.repo.chart(), self.repo.version()))
-      os.system('helm pull --repo {} {} --version {} | grep -i error'.format(self.repo.repository(), self.repo.chart(), self.repo.version()))
-
-      # Untar chart tarball file
-      if verbose > 0:
-        print('(DEBUG) Extract helm chart: tar xf {}-{}.tgz'.format(self.repo.chart(), self.repo.version()))
-      os.system('tar xf {}-{}.tgz'.format(self.repo.chart(), self.repo.version()))
-
-      if os.path.exists(f'{self.repo.chart()}/crds'):
-        # Copy crd files into output directory
-        os.system('cp -r {}/crds/* {}/{}/'.format(self.repo.chart(), targetdir, self.name))
-        # Cleanup
-        os.system('rm -rf ./{}'.format(self.repo.chart()))
-
-        return
-      else:
-        print('Minor: this chart contains no crds directory, so try again with a cli - helm show crds')
-
-    # For general argoCD app, render helm chart into single manifest yaml
     genfile=self.genTemplateFile(verbose)
 
     if verbose > 0:
@@ -204,39 +178,25 @@ class Helm:
     return image_list
 
   def genTemplateFile(self, verbose=0):
+    # For crd-only argoCD app, using other cmd 'helm show crds'
+    isCrd=self.name.endswith('-crds')
+
     yaml.dump(self.override, open('vo', 'w') , default_flow_style=False)
     print('[Generate resource yamls for {} from {}/{} in {}]'.
       format(self.name, self.repo.repository(), self.repo.chart(), self.namespace))
 
     if self.repo.repotype == RepoType.HELMREPO:
-      if (self.repo.repository().startswith('oci://')):
-        # Generate template file
-        if verbose > 0:
-          print('(DEBUG) gernerate template file')
-          print(self.toString())
-          print('helm template -n {0} {1} {2}/{3} --version {4} -f vo > {1}.plain.yaml'
-            .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
-
-        if self.name.endswith('-crds'):
-          os.system(' helm show crds {1}/{2} > {0}.plain.yaml'
-              .format(self.name, self.repo.repository(), self.repo.chart()))
-        else:
-          os.system('helm template -n {0} {1} {2}/{3} --version {4} -f vo > {1}.plain.yaml (or show crds)'
-              .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+      if isCrd:
+        helmcmd='helm show crds --repo {2} {3} --version {4} > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version())
       else:
-        # Generate template file
-        if verbose > 0:
-          print('(DEBUG) gernerate template file')
-          print(self.toString())
-          print('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml (or show crds)'
-            .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+        helmcmd='helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version())
+      # Generate template file
+      if verbose > 0:
+        print('(DEBUG) gernerate template file')
+        print(self.toString())
+        print(helmcmd)
 
-        if self.name.endswith('-crds'):
-          os.system(' helm show crds --repo {1} {2} > {0}.plain.yaml'
-              .format(self.name, self.repo.repository(), self.repo.chart()))
-        else:
-          os.system('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
-              .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+      os.system(helmcmd)
 
     elif self.repo.repotype == RepoType.GIT:
       # prepare repository
@@ -258,12 +218,11 @@ class Helm:
         os.system('helm template -n {0} {1} .temporary-clone/{2} -f vo  > {1}.plain.yaml (or show crds)'
             .format(self.namespace, self.name, self.repo.path()))
 
-      if self.name.endswith('-crds'):
-        os.system(' helm show crds .temporary-clone/{1} > {0}.plain.yaml'
-            .format(self.name, self.repo.path()))
+      if isCrd:
+        helmcmd='helm show crds .temporary-clone/{2} > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.path())
       else:
-        os.system('helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'
-            .format(self.namespace, self.name, self.repo.path()))
+        helmcmd='helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.path())
+      os.system(helmcmd)
 
       # clean reposiotry
       os.system('rm -rf .temporary-clone')
