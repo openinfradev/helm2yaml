@@ -97,69 +97,47 @@ class Helm:
     target = '{}/{}/'.format(targetdir, self.name)
     os.system('mkdir -p {}'.format(target))
 
-    # For crd-only argoCD app, just copy crd files into output directory
-    if self.name.endswith('-crds'):
-      print('[Copy CRD yamls for {} from {}/{}]'.
-      format(self.name, self.repo.repository(), self.repo.chart()))
+    genfile=self.genTemplateFile(verbose)
 
-      # Pull helm chart from chart repo
-      if verbose > 0:
-        print('(DEBUG) Pull helm chart: helm pull --repo  {} {} --version {}'.format(self.repo.repository(), self.repo.chart(), self.repo.version()))
-      os.system('helm pull --repo {} {} --version {} | grep -i error'.format(self.repo.repository(), self.repo.chart(), self.repo.version()))
+    if verbose > 0:
+      print('(DEBUG) seperate all-in-one yaml into each resource yaml')
+    os.system('mv {} {}'.format(genfile, target))
 
-      # Untar chart tarball file
-      if verbose > 0:
-        print('(DEBUG) Extract helm chart: tar xf {}-{}.tgz'.format(self.repo.chart(), self.repo.version()))
-      os.system('tar xf {}-{}.tgz'.format(self.repo.chart(), self.repo.version()))
+    # Split into each k8s resource yaml
+    splitcmd = "awk '{f=\""+target+"/_\" NR; print $0 > f}' RS='\n---\n' "+target+genfile
+    os.system(splitcmd)
+    os.system('rm {0}{1}'.format(target,genfile))
 
-      # Copy crd files into output directory
-      os.system('cp -r {}/crds/* {}/{}/'.format(self.repo.chart(), targetdir, self.name))
-      # Cleanup
-      os.system('rm -rf ./{}'.format(self.repo.chart()))
+    # Rename yaml to "KIND_RESOURCENAME.yaml"
+    if verbose > 0:
+      print('(DEBUG) rename resource yaml files')
+    for entry in os.scandir(target):
+      refinedname =''
+      with open(entry, 'r') as stream:
+        try:
+          parsed = yaml.safe_load(stream)
+          refinedname = '{}_{}.yaml'.format(parsed['kind'],parsed['metadata']['name'])
 
-    # For general argoCD app, render helm chart into single manifest yaml
-    else:
-      genfile=self.genTemplateFile(verbose)
+          if(local_repository!=None):
+            self.__replaceImages(parsed, local_repository)
 
-      if verbose > 0:
-        print('(DEBUG) seperate all-in-one yaml into each resource yaml')
-      os.system('mv {} {}'.format(genfile, target))
-
-      # Split into each k8s resource yaml
-      splitcmd = "awk '{f=\""+target+"/_\" NR; print $0 > f}' RS='\n---\n' "+target+genfile
-      os.system(splitcmd)
-      os.system('rm {0}{1}'.format(target,genfile))
-
-      # Rename yaml to "KIND_RESOURCENAME.yaml"
-      if verbose > 0:
-        print('(DEBUG) rename resource yaml files')
-      for entry in os.scandir(target):
-        refinedname =''
-        with open(entry, 'r') as stream:
-          try:
-            parsed = yaml.safe_load(stream)
-            refinedname = '{}_{}.yaml'.format(parsed['kind'],parsed['metadata']['name'])
-
-            if(local_repository!=None):
-              self.__replaceImages(parsed, local_repository)
-
-          except yaml.YAMLError as exc:
+        except yaml.YAMLError as exc:
+          print('(WARN)',exc,":::", parsed)
+        except TypeError as exc:
+          if os.path.getsize(entry)>80:
             print('(WARN)',exc,":::", parsed)
-          except TypeError as exc:
-            if os.path.getsize(entry)>80:
-              print('(WARN)',exc,":::", parsed)
-              if verbose > 0:
-                print("(DEBUG) Contents in the file :", entry.name)
-                print(stream.readlines())
-        if (refinedname!=''):
-          with open(target+refinedname, 'w') as file:
-            documents = yaml.dump(parsed, file)
-          if os.path.exists(target+refinedname):
-            os.remove(entry)
-          else:
-            os.rename(entry, target+'/'+refinedname)
-        else:
+            if verbose > 0:
+              print("(DEBUG) Contents in the file :", entry.name)
+              print(stream.readlines())
+      if (refinedname!=''):
+        with open(target+refinedname, 'w') as file:
+          documents = yaml.dump(parsed, file)
+        if os.path.exists(target+refinedname):
           os.remove(entry)
+        else:
+          os.rename(entry, target+'/'+refinedname)
+      else:
+        os.remove(entry)
 
   def get_image_list(self, verbose=False):
 
@@ -201,20 +179,25 @@ class Helm:
     return image_list
 
   def genTemplateFile(self, verbose=0):
+    # For crd-only argoCD app, using other cmd 'helm show crds'
+    isCrd=self.name.endswith('-crds')
+
     yaml.dump(self.override, open('vo', 'w') , default_flow_style=False)
     print('[Generate resource yamls for {} from {}/{} in {}]'.
       format(self.name, self.repo.repository(), self.repo.chart(), self.namespace))
 
     if self.repo.repotype == RepoType.HELMREPO:
+      if isCrd:
+        helmcmd='helm show crds --repo {2} {3} --version {4} > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version())
+      else:
+        helmcmd='helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version())
       # Generate template file
       if verbose > 0:
         print('(DEBUG) gernerate template file')
         print(self.toString())
-        print('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
-          .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+        print(helmcmd)
 
-      os.system('helm template -n {0} {1} --repo {2} {3} --version {4} -f vo > {1}.plain.yaml'
-          .format(self.namespace, self.name, self.repo.repository(), self.repo.chart(), self.repo.version()))
+      os.system(helmcmd)
 
     elif self.repo.repotype == RepoType.GIT:
       # prepare repository
@@ -234,8 +217,11 @@ class Helm:
       if verbose > 0:
         print('(DEBUG) gernerat a template file')
 
-      os.system('helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'
-          .format(self.namespace, self.name, self.repo.path()))
+      if isCrd:
+        helmcmd='helm show crds .temporary-clone/{2} > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.path())
+      else:
+        helmcmd='helm template -n {0} {1} .temporary-clone/{2} -f vo > {1}.plain.yaml'.format(self.namespace, self.name, self.repo.path())
+      os.system(helmcmd)
 
       # clean reposiotry
       os.system('rm -rf .temporary-clone')
