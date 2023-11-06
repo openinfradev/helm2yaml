@@ -1,4 +1,4 @@
-FROM sktcloud/decapod-kustomize:v2.0.0 AS gobuilder
+FROM harbor.taco-cat.xyz/tks/decapod-kustomize:v2.0.1 AS gobuilder
 LABEL AUTHOR sungil(usnexp@gmail.com)
 
 FROM python:3.10.5-alpine3.16 AS builder
