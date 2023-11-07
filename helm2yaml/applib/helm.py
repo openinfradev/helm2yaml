@@ -108,6 +108,14 @@ class Helm:
     os.system(splitcmd)
     os.system('rm {0}{1}'.format(target,genfile))
 
+    isCrd=self.name.endswith('-crds')
+    if isCrd:
+      for entry in os.scandir(target):
+        if entry.is_file():
+          splitcmd = "awk '{f=\""+target+"/"+entry.name+"-\" NR; print $0 > f}' RS='' "+target+"/"+entry.name
+          os.system(splitcmd)
+          os.system('rm {0}{1}'.format(target,entry.name))
+
     # Rename yaml to "KIND_RESOURCENAME.yaml"
     if verbose > 0:
       print('(DEBUG) rename resource yaml files')
