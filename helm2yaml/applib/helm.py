@@ -127,7 +127,18 @@ class Helm:
 
           if(local_repository!=None):
             self.__replaceImages(parsed, local_repository)
-
+        except yaml.constructor.ConstructorError as exc:
+          # Very very tricky logic to avoid a exception on some crds (alertmanagerconfigs.monitoring.coreos.com)
+          lines = open(entry, 'r').readlines()
+          rkind=rname=''
+          for line in lines:
+            if 'kind: ' in line:
+              rkind=line.split('kind: ')[-1].strip()
+            if 'name: ' in line:
+              rname=line.split('name: ')[-1].strip()
+              os.rename(entry, target+'/'+ '{}_{}.yaml'.format(rkind, rname))
+              break
+          continue
         except yaml.YAMLError as exc:
           print('(WARN)',exc,":::", parsed)
         except TypeError as exc:
@@ -143,7 +154,7 @@ class Helm:
           os.remove(entry)
         else:
           os.rename(entry, target+'/'+refinedname)
-      else:
+      elif os.path.exists(entry):
         os.remove(entry)
 
   def get_image_list(self, verbose=False):
