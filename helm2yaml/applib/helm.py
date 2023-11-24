@@ -107,6 +107,14 @@ class Helm:
     os.system(splitcmd)
     os.system('rm {0}{1}'.format(target,genfile))
 
+    isCrd=self.name.endswith('-crds')
+    if isCrd:
+      for entry in os.scandir(target):
+        if entry.is_file():
+          splitcmd = "awk '{f=\""+target+"/"+entry.name+"-\" NR; print $0 > f}' RS='' "+target+"/"+entry.name
+          os.system(splitcmd)
+          os.system('rm {0}{1}'.format(target,entry.name))
+
     # Rename yaml to "KIND_RESOURCENAME.yaml"
     if verbose > 0:
       print('(DEBUG) rename resource yaml files')
@@ -119,7 +127,18 @@ class Helm:
 
           if(local_repository!=None):
             self.__replaceImages(parsed, local_repository)
-
+        except yaml.constructor.ConstructorError as exc:
+          # Very very tricky logic to avoid a exception on some crds (alertmanagerconfigs.monitoring.coreos.com)
+          lines = open(entry, 'r').readlines()
+          rkind=rname=''
+          for line in lines:
+            if 'kind: ' in line:
+              rkind=line.split('kind: ')[-1].strip()
+            if 'name: ' in line:
+              rname=line.split('name: ')[-1].strip()
+              os.rename(entry, target+'/'+ '{}_{}.yaml'.format(rkind, rname))
+              break
+          continue
         except yaml.YAMLError as exc:
           print('(WARN)',exc,":::", parsed)
         except TypeError as exc:
@@ -135,7 +154,7 @@ class Helm:
           os.remove(entry)
         else:
           os.rename(entry, target+'/'+refinedname)
-      else:
+      elif os.path.exists(entry):
         os.remove(entry)
 
   def get_image_list(self, verbose=False):
