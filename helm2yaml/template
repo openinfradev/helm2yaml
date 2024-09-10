@@ -1,0 +1,43 @@
+#!/usr/local/bin/python3
+
+import sys
+import argparse
+from typing import Dict, Any
+from applib.helmdeploy import HelmDeployManager
+
+class AppConfig:
+  DEFAULT_WORKFLOW = 'default'
+  DEFAULT_KUBECONFIG = '~/.kube/config'
+  DEFAULT_OUTPUT_DIR = 'cd'
+  DEFAULT_BASE = './base/ai-base.yaml'
+
+
+def parse_arguments() -> argparse.Namespace:
+  parser = argparse.ArgumentParser(description="Process app manifest and generate YAML files")
+  parser.add_argument('-o', '--override', required=True, help="The manifest file with override values")
+  parser.add_argument('-b', '--base', default=AppConfig.DEFAULT_BASE, help="The base manifest file")
+  parser.add_argument('-v', '--verbose', action='count', default=0, help="Increase verbosity")
+  parser.add_argument('-k', '--kubeconfig', default=AppConfig.DEFAULT_KUBECONFIG,
+                      help="Kubeconfig file to access your k8s cluster")
+  parser.add_argument('-n', '--namespace', help="Define namespace to install regardless of the manifest")
+  parser.add_argument('--output', default=AppConfig.DEFAULT_OUTPUT_DIR, help="Output directory for YAML files")
+  return parser.parse_args()
+
+
+def print_debug_info(manifests: Dict[str, Any]) -> None:
+  print('(DEBUG) loaded manifest:', manifests)
+  for key, value in manifests.items():
+    print(key, value)
+
+
+def main() -> None:
+  args = parse_arguments()
+
+  helm_manager = HelmDeployManager(kubeconfig=args.kubeconfig, base=args.base, namespace=args.namespace, verbose=args.verbose)
+  helm_manager.load_site(args.override, ['CHANGEME','FIXME','TODO'])
+
+  helm_manager.template_yaml(args.output)
+
+
+if __name__ == "__main__":
+  main()

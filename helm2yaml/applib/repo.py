@@ -1,63 +1,42 @@
 from enum import Enum, unique
-import sys, yaml, os, time, getopt
+from typing import Optional
+
 
 @unique
 class RepoType(Enum):
-  HELMREPO=1
-  GIT=2
-  LOCAL=3
+  HELMREPO = 1
+  GIT = 2
+  LOCAL = 3
 
 class Repo:
-# Will Make When it's needed
-  def __init__(self):
-    self.list=[]
-
-  def __init__(self, repotype, repo, chartOrPath, versionOrReference):
+  def __init__(self, repotype: RepoType, repo: str, chart_or_path: str, version_or_reference: str):
     self.repotype = repotype
     self.repo = repo
-    self.chartOrPath = chartOrPath
-    self.versionOrReference = versionOrReference
+    self.chart_or_path = chart_or_path
+    self.version_or_reference = version_or_reference
 
-  def toString(self):
-    return '[REPO: {}, {}, {}, {}]'.format(    self.repotype,
-      self.repo,
-      self.chartOrPath,
-      self.versionOrReference )
-  
-  def version(self):
-    if self.repotype == RepoType.HELMREPO:
-      return self.versionOrReference
-    else: 
-      return None
+  def __str__(self) -> str:
+    return f'[REPO: {self.repotype} {self.repo}, {self.chart_or_path}, {self.version_or_reference}]'
 
-  def reference(self):
-    if self.repotype == RepoType.GIT:
-      return self.versionOrReference
-    else: 
-      return None
+  def version(self) -> Optional[str]:
+      return self.version_or_reference if self.repotype == RepoType.HELMREPO else None
 
-  def chart(self):
-    if self.repotype == RepoType.HELMREPO:
-      return self.chartOrPath
-    else: 
-      return None
-  def path(self):
-    if self.repotype == RepoType.GIT:
-      return self.chartOrPath
-    else: 
-      return None
+  def reference(self) -> Optional[str]:
+    return self.version_or_reference if self.repotype == RepoType.GIT else None
 
-  def repository(self):
+  def chart(self) -> Optional[str]:
+    return self.chart_or_path if self.repotype == RepoType.HELMREPO else None
+
+  def path(self) -> Optional[str]:
+    return self.chart_or_path if self.repotype == RepoType.GIT else None
+
+  def repository(self) -> str:
     return self.repo
-  
-  def getUrl(self):
-    if self.repotype == RepoType.GIT and self.repo.startswith('git@'):
-      if self.repo.endswith('.git'):
-        return self.repo.replace(':','/').replace('git@','https://')
-      else:
-        return self.repo.replace(':','/').replace('git@','https://')+'.git'
 
+  def get_url(self) -> Optional[str]:
     if self.repotype == RepoType.GIT:
+      if self.repo.startswith('git@'):
+        url = self.repo.replace(':', '/').replace('git@', 'https://')
+        return url if url.endswith('.git') else f"{url}.git"
       return self.repo
-    else:
-      return None
+    return None

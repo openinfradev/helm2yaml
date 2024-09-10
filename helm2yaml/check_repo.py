@@ -1,8 +1,8 @@
 #!/usr/local/bin/python3
 from applib.helm import Helm
 from applib.repo import Repo, RepoType
-import sys, os, time, getopt, yaml
-from common import *
+import sys, getopt
+from monstar.installer.applib.helmdeploy import *
 
 TEMPDIR="tmp"
 
